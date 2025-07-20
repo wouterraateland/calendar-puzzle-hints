@@ -88,7 +88,8 @@ export default function Puzzle({ date }: { date: string }) {
       ) : (
         <button
           className="touch-manipulation bg-white px-2 text-black hover:bg-gray-200"
-          onClick={() => {
+          onClick={(event) => {
+            event.currentTarget.disabled = true;
             setSolving(true);
             setTimeout(() => {
               const randomPieces = pieces
@@ -96,7 +97,7 @@ export default function Puzzle({ date }: { date: string }) {
                 .slice(0, 10);
               setSolution(solve(generateBoard(date), randomPieces));
               setSolving(false);
-            });
+            }, 30);
           }}
           type="button"
         >
