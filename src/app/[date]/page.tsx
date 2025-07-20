@@ -2,9 +2,6 @@ import Navigation from "app/[date]/navigation";
 import Puzzle from "app/[date]/puzzle";
 import Link from "next/link";
 import { dateParse } from "utils/dates";
-import type { Board } from "utils/puzzle";
-import { generateBoard } from "utils/puzzle";
-import { redis } from "utils/redis";
 
 export const dynamic = "force-dynamic";
 
@@ -29,15 +26,11 @@ export default async function Page({
       </html>
     );
 
-  const solution =
-    (await redis.get<Board>(`date-puzzle-solution:${date}`)) ??
-    generateBoard(date);
-
   return (
     <html>
       <body className="flex h-[100dvh] flex-col items-center justify-center gap-8 bg-black font-mono text-white">
         <Navigation date={date} />
-        <Puzzle date={date} initialSolution={solution} />
+        <Puzzle date={date} />
       </body>
     </html>
   );

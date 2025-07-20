@@ -1,19 +1,11 @@
 "use client";
 
-import { solveForDate } from "app/[date]/actions";
 import { useState } from "react";
-import type { Board } from "utils/puzzle";
-import { E, V, values } from "utils/puzzle";
+import { E, generateBoard, pieces, solve, V, values } from "utils/puzzle";
 
-export default function Puzzle({
-  date,
-  initialSolution,
-}: {
-  date: string;
-  initialSolution: Board;
-}) {
+export default function Puzzle({ date }: { date: string }) {
   const [solving, setSolving] = useState(false);
-  const [solution, setSolution] = useState(initialSolution);
+  const [solution, setSolution] = useState(() => generateBoard(date));
   const [hints, setHints] = useState(0);
   const solved = solution.every((row) => row.every((cell) => cell !== 0));
 
@@ -96,10 +88,15 @@ export default function Puzzle({
       ) : (
         <button
           className="touch-manipulation bg-white px-2 text-black hover:bg-gray-200"
-          onClick={async () => {
+          onClick={() => {
             setSolving(true);
-            setSolution(await solveForDate(date));
-            setSolving(false);
+            setTimeout(() => {
+              const randomPieces = pieces
+                .sort(() => Math.random() - 0.5)
+                .slice(0, 10);
+              setSolution(solve(generateBoard(date), randomPieces));
+              setSolving(false);
+            });
           }}
           type="button"
         >

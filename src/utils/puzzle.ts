@@ -74,7 +74,7 @@ export const values: Array<
   ],
 ];
 
-export type Board = Array<Array<number>>;
+type Board = Array<Array<number>>;
 export const V = 16;
 export const E = 17;
 const emptyBoard: Board = [
@@ -202,8 +202,14 @@ const rotationMatrices: Array<RotationMatrix> = [
   ],
 ];
 
+const zero = 0n;
+const one = 1n;
+
 const positionHash = ({ x, y }: Position) =>
-  (1n << (BigInt(y) * BigInt(bw))) << BigInt(x);
+  (one << (BigInt(y) * BigInt(bw))) << BigInt(x);
+
+const positionsToMask = (positions: Array<Position>) =>
+  positions.reduce((acc, position) => acc | positionHash(position), 0n);
 
 export const pieces = pieceConfigurations.map(({ mirror, layout }, i) => {
   const h = layout.length;
@@ -242,27 +248,115 @@ export const pieces = pieceConfigurations.map(({ mirror, layout }, i) => {
           h: Math.max(...positions.map(({ y }) => y)) - yMin,
         };
       })
-      .map(({ w, h, positions }) => ({
-        mask: positions.reduce(
-          (acc, position) => acc | positionHash(position),
-          0n,
-        ),
-        w,
-        h,
-      })),
+      .flatMap(({ w, h, positions }) => {
+        let mask = positionsToMask(positions);
+        const variants = new Array<bigint>();
+        for (let oy = 0; oy < bh; oy++)
+          for (let ox = 0; ox < bw; ox++, mask = mask << one)
+            if (ox < bw - w && oy < bh - h) variants.push(mask);
+        return variants;
+      }),
   };
 });
+
+const H = new Array<[bigint, bigint]>();
+
+const generateHoleMasks = (h1p: Array<Position>, h2p: Array<Position>) => {
+  for (let y = 0; y < bh; y++)
+    for (let x = 0; x < bw; x++)
+      H.push([
+        positionsToMask(
+          h1p
+            .map(({ x: dx, y: dy }) => ({ x: x + dx, y: y + dy }))
+            .filter(({ x, y }) => x >= 0 && x < bw && y >= 0 && y < bh),
+        ),
+        positionsToMask(
+          h2p
+            .map(({ x: dx, y: dy }) => ({ x: x + dx, y: y + dy }))
+            .filter(({ x, y }) => x >= 0 && x < bw && y >= 0 && y < bh),
+        ),
+      ]);
+};
+
+generateHoleMasks(
+  [
+    { x: 0, y: -1 },
+    { x: -1, y: 0 },
+    { x: 0, y: 0 },
+    { x: 1, y: 0 },
+    { x: 0, y: 1 },
+  ],
+  [
+    { x: 0, y: -1 },
+    { x: -1, y: 0 },
+    { x: 1, y: 0 },
+    { x: 0, y: 1 },
+  ],
+);
+
+generateHoleMasks(
+  [
+    { x: 0, y: -1 },
+    { x: -1, y: 0 },
+    { x: 0, y: 0 },
+    { x: 1, y: 0 },
+    { x: -1, y: 1 },
+    { x: 0, y: 1 },
+    { x: 1, y: 1 },
+    { x: 0, y: 2 },
+  ],
+  [
+    { x: 0, y: -1 },
+    { x: -1, y: 0 },
+    { x: 1, y: 0 },
+    { x: -1, y: 1 },
+    { x: 1, y: 1 },
+    { x: 0, y: 2 },
+  ],
+);
+
+generateHoleMasks(
+  [
+    { x: -1, y: 0 },
+    { x: 0, y: -1 },
+    { x: 0, y: 0 },
+    { x: 0, y: 1 },
+    { x: 1, y: -1 },
+    { x: 1, y: 0 },
+    { x: 1, y: 1 },
+    { x: 2, y: 0 },
+  ],
+  [
+    { x: -1, y: 0 },
+    { x: 0, y: -1 },
+    { x: 0, y: 1 },
+    { x: 1, y: -1 },
+    { x: 1, y: 1 },
+    { x: 2, y: 0 },
+  ],
+);
 
 type Piece = (typeof pieces)[number];
 type Solution = Array<{ i: number; mask: bigint }>;
 
 export const solve = (board: Board, pieces: Array<Piece>) => {
-  let boardMask = 0n;
+  let boardMask = zero;
   for (let y = 0; y < bh; y++)
     for (let x = 0; x < bw; x++)
       if (board[y]?.[x]) boardMask |= positionHash({ x, y });
 
-  const todo = [{ boardMask, pieces, solution: [] as Solution }];
+  const todo = [
+    {
+      boardMask,
+      pieces: pieces.map((piece) => ({
+        i: piece.i,
+        variants: piece.variants.filter(
+          (variant) => (variant & boardMask) === zero,
+        ),
+      })),
+      solution: [] as Solution,
+    },
+  ];
   let next:
     | { boardMask: bigint; pieces: Array<Piece>; solution: Solution }
     | undefined;
@@ -271,24 +365,28 @@ export const solve = (board: Board, pieces: Array<Piece>) => {
     if (!piece) {
       const res = board.map((row) => row.slice());
       for (const { i, mask } of next.solution)
-        for (let y = 0, h = 1n; y < bh; y++)
-          for (let x = 0; x < bw; x++, h = h << 1n)
+        for (let y = 0, h = one; y < bh; y++)
+          for (let x = 0; x < bw; x++, h = h << one)
             if (mask & h) res[y]![x] = i;
       return res;
     }
-    for (const variant of piece.variants)
-      for (let oy = 0, mask = variant.mask; oy < bh; oy++)
-        for (let ox = 0; ox < bw; ox++, mask = mask << 1n)
-          if (
-            ox < bw - variant.w &&
-            oy < bh - variant.h &&
-            (next.boardMask & mask) === 0n
-          )
-            todo.push({
-              boardMask: next.boardMask | mask,
-              pieces,
-              solution: next.solution.concat({ i: piece.i, mask }),
-            });
+
+    variantLoop: for (const variant of piece.variants) {
+      const nextMask = next.boardMask | variant;
+      for (const h of H)
+        if (((h[0] & nextMask) ^ h[1]) === zero) continue variantLoop;
+
+      todo.push({
+        boardMask: nextMask,
+        pieces: pieces.map((piece) => ({
+          i: piece.i,
+          variants: piece.variants.filter(
+            (variant) => (variant & nextMask) === zero,
+          ),
+        })),
+        solution: next.solution.concat({ i: piece.i, mask: variant }),
+      });
+    }
   }
   return board;
 };
