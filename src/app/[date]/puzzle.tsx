@@ -94,7 +94,7 @@ export default function Puzzle({ date }: { date: string }) {
             setTimeout(() => {
               const randomPieces = pieces
                 .sort(() => Math.random() - 0.5)
-                .map((piece, i) => ({ ...piece, i }));
+                .map((piece, i) => ({ ...piece, i: i + 1 }));
               setSolution(solve(generateBoard(date), randomPieces));
               setSolving(false);
             }, 30);
