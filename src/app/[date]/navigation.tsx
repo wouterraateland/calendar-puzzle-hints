@@ -9,7 +9,7 @@ export default function Navigation({ date }: { date: string }) {
   const prev = new Date(current);
   prev.setDate(current.getDate() - 1);
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex select-none items-center gap-1">
       <Link
         className="touch-manipulation opacity-50 transition-opacity hover:opacity-100"
         href={`/${dateStringify(prev)}`}

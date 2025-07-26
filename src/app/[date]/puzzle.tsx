@@ -1,5 +1,6 @@
 "use client";
 
+import clsx from "clsx";
 import { useState } from "react";
 import { E, generateBoard, pieces, solve, V, values } from "utils/puzzle";
 
@@ -12,8 +13,8 @@ export default function Puzzle({ date }: { date: string }) {
   return (
     <>
       <div
-        className="grid grid-cols-9 grid-rows-6 text-center ring-[1rem] ring-[#444] ring-offset-0"
-        style={{ width: "60vmin", height: "40vmin", fontSize: "3vmin" }}
+        className="box-content grid select-none grid-cols-9 grid-rows-6 rounded-[2.2em] border-[1.8em] border-neutral-500 p-[0.1em] text-center ring-offset-0"
+        style={{ width: "18em", height: "12em", fontSize: "3vmin" }}
       >
         {values.map((row, y) =>
           row.map((cell, x) => (
@@ -40,29 +41,55 @@ export default function Puzzle({ date }: { date: string }) {
           row.map((cell, x) => (
             <div
               key={`${x},${y}`}
-              style={{
-                background:
-                  cell === 0 || cell === E
-                    ? "transparent"
-                    : cell === V
-                      ? "#444"
-                      : hints >= cell
-                        ? `hsl(${120 - 20 * cell}deg, 75%, ${100 - 9 * cell}%)`
-                        : "transparent",
-                border: cell === E ? "0.5vmin solid #888" : "none",
-                gridColumnStart: x + 1,
-                gridRowStart: y + 1,
-              }}
+              className={clsx({
+                "mt-[0.1em]": solution[y - 1]?.[x] !== cell,
+                "mr-[0.1em]": solution[y]?.[x + 1] !== cell,
+                "mb-[0.1em]": solution[y + 1]?.[x] !== cell,
+                "ml-[0.1em]": solution[y]?.[x - 1] !== cell,
+                "rounded-tl-[0.2em]":
+                  solution[y]?.[x - 1] !== cell &&
+                  solution[y - 1]?.[x] !== cell,
+                "rounded-tr-[0.2em]":
+                  solution[y]?.[x + 1] !== cell &&
+                  solution[y - 1]?.[x] !== cell,
+                "rounded-bl-[0.2em]":
+                  solution[y]?.[x - 1] !== cell &&
+                  solution[y + 1]?.[x] !== cell,
+                "rounded-br-[0.2em]":
+                  solution[y]?.[x + 1] !== cell &&
+                  solution[y + 1]?.[x] !== cell,
+                "rounded-tl-[0.1em]":
+                  solution[y]?.[x - 1] === cell &&
+                  solution[y - 1]?.[x] === cell &&
+                  solution[y - 1]?.[x - 1] !== cell,
+                "rounded-tr-[0.1em]":
+                  solution[y]?.[x + 1] === cell &&
+                  solution[y - 1]?.[x] === cell &&
+                  solution[y - 1]?.[x + 1] !== cell,
+                "rounded-bl-[0.1em]":
+                  solution[y]?.[x - 1] === cell &&
+                  solution[y + 1]?.[x] === cell &&
+                  solution[y + 1]?.[x - 1] !== cell,
+                "rounded-br-[0.1em]":
+                  solution[y]?.[x + 1] === cell &&
+                  solution[y + 1]?.[x] === cell &&
+                  solution[y + 1]?.[x + 1] !== cell,
+                "bg-neutral-500": cell === V,
+                "bg-white mix-blend-difference": cell === E,
+                "bg-blue-500":
+                  cell !== 0 && cell !== E && cell !== V && hints >= cell,
+              })}
+              style={{ gridColumnStart: x + 1, gridRowStart: y + 1 }}
             />
           )),
         )}
       </div>
       {solved ? (
-        <div className="flex items-center gap-4">
-          <p>Hints: {hints}</p>
+        <div className="flex select-none items-center gap-4">
+          <p>Hints: {`${hints}`.padStart(2, "0")}</p>
           <div className="flex gap-1">
             <button
-              className="touch-manipulation bg-white px-2 text-black hover:bg-gray-200 disabled:pointer-events-none"
+              className="flex size-6 touch-manipulation items-center justify-center rounded-md bg-white text-black hover:bg-gray-200 disabled:pointer-events-none disabled:bg-neutral-500"
               disabled={hints <= 0}
               onClick={() => {
                 setHints((h) => Math.max(0, h - 1));
@@ -72,7 +99,7 @@ export default function Puzzle({ date }: { date: string }) {
               -
             </button>
             <button
-              className="touch-manipulation bg-white px-2 text-black hover:bg-gray-200 disabled:pointer-events-none"
+              className="flex size-6 touch-manipulation items-center justify-center rounded-md bg-white text-black hover:bg-gray-200 disabled:pointer-events-none disabled:bg-neutral-500"
               disabled={hints >= 10}
               onClick={() => {
                 setHints((h) => Math.min(h + 1, 10));
@@ -84,10 +111,12 @@ export default function Puzzle({ date }: { date: string }) {
           </div>
         </div>
       ) : solving ? (
-        <div className="bg-white px-2 text-black">Solving...</div>
+        <div className="select-none rounded-md bg-white px-4 py-2 text-black">
+          Solving...
+        </div>
       ) : (
         <button
-          className="touch-manipulation bg-white px-2 text-black hover:bg-gray-200"
+          className="touch-manipulation select-none rounded-md bg-white px-4 py-2 text-black hover:bg-gray-200"
           onClick={(event) => {
             event.currentTarget.disabled = true;
             setSolving(true);
