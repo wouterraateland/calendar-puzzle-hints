@@ -31,7 +31,7 @@ export default function Puzzle({ date }: { date: string }) {
                   : cell.type === "day"
                     ? Intl.DateTimeFormat("nl-NL", {
                         weekday: "narrow",
-                      }).format(new Date(`2025-09-${cell.value + 7}`))
+                      }).format(new Date(`2025-09-${cell.value + 14}`))
                     : ""}
             </div>
           )),
@@ -94,7 +94,7 @@ export default function Puzzle({ date }: { date: string }) {
             setTimeout(() => {
               const randomPieces = pieces
                 .sort(() => Math.random() - 0.5)
-                .slice(0, 10);
+                .map((piece, i) => ({ ...piece, i }));
               setSolution(solve(generateBoard(date), randomPieces));
               setSolving(false);
             }, 30);
